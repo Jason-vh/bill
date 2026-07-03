@@ -56,6 +56,24 @@ async function authenticateMcpRequest(request: Request) {
 
 async function handleMcp(request: Request): Promise<Response> {
   const authInfo = await authenticateMcpRequest(request);
+  const accept = request.headers.get('accept') ?? '';
+  const ct = request.headers.get('content-type') ?? '';
+  const protoVer = request.headers.get('mcp-protocol-version') ?? '';
+  const sessId = request.headers.get('mcp-session-id') ?? '';
+  let rpcMethod = '';
+  let bodyText = '';
+  if (request.method === 'POST') {
+    try {
+      bodyText = await request.clone().text();
+      rpcMethod = (JSON.parse(bodyText)?.method as string) ?? '';
+    } catch {
+      rpcMethod = '<unparseable>';
+    }
+  }
+  console.log(
+    `[mcp] ${request.method} auth=${authInfo ? 'ok' : 'NONE'} rpc=${rpcMethod || '-'} ` +
+      `accept="${accept}" ct="${ct}" proto="${protoVer}" sess="${sessId}" bodyLen=${bodyText.length}`,
+  );
   if (!authInfo) {
     const headers = oauth.buildUnauthorizedHeaders();
     headers.set('content-type', 'application/json');
@@ -71,6 +89,7 @@ async function handleMcp(request: Request): Promise<Response> {
   try {
     await server.connect(transport);
     const response = await transport.handleRequest(request, { authInfo });
+    console.log(`[mcp] -> ${request.method} rpc=${rpcMethod || '-'} status=${response.status} ct="${response.headers.get('content-type') ?? ''}"`);
     await server.close();
     await transport.close();
     return withCors(response);
@@ -98,6 +117,10 @@ const app = Bun.serve({
   port: config.port,
   async fetch(request) {
     const url = new URL(request.url);
+
+    if (url.pathname !== '/health') {
+      console.log(`[req] ${request.method} ${url.pathname}${url.search} ua="${request.headers.get('user-agent') ?? ''}"`);
+    }
 
     if (request.method === 'OPTIONS') {
       return withCors(new Response(null, { status: 204 }));
