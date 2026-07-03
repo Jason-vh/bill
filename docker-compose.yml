@@ -1,0 +1,21 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      PORT: 3000
+    ports:
+      - "127.0.0.1:${MCP_APP_HOST_PORT:-3008}:3000"
+    volumes:
+      - mcp-data:/app/data
+    networks:
+      - apps-net
+
+volumes:
+  mcp-data:
+
+networks:
+  apps-net:
+    external: true

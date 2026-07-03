@@ -1,0 +1,7 @@
+node_modules
+.env
+.env.*
+!.env.example
+
+# Runtime OAuth state (persisted in the Docker volume in prod, local file in dev)
+data/*.json
