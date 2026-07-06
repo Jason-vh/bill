@@ -44,8 +44,7 @@ async function authenticateMcpRequest(request: Request) {
   const auth = oauth.verifyAccessToken(token);
   if (!auth) return null;
   if (!auth.scopes.includes('mcp:tools')) return null;
-  const allowedResources = [`${config.publicBaseUrl}/mcp`, config.publicBaseUrl, `${config.publicBaseUrl}/`];
-  if (!allowedResources.includes(auth.resource)) return null;
+  if (auth.resource !== `${config.publicBaseUrl}/mcp`) return null;
   return {
     token,
     clientId: auth.clientId,
@@ -175,9 +174,7 @@ const app = Bun.serve({
       );
     }
 
-    // Serve MCP at both /mcp and the root, so a connector configured with the
-    // bare domain (no /mcp path) works too.
-    if (url.pathname === '/mcp' || url.pathname === '/') {
+    if (url.pathname === '/mcp') {
       return handleMcp(request);
     }
 
