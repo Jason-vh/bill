@@ -117,7 +117,7 @@ group/account identifiers, not secrets):
 |---|---|
 | `YNAB_ACCESS_TOKEN` | Shared with the MCP service (GitHub Actions secret). |
 | `BILL_BUDGET_ID` | `budget!` plan. |
-| `BILL_JOINT_GROUP_ID` | The `joint` category group. |
+| `BILL_JOINT_GROUP_IDS` | The joint category groups, comma-separated (`joint: bills`, `joint: spending`). |
 | `BILL_JOINT_ACCOUNT_ID` | The `Revolut Joint` account (transaction filter). |
 | `BILL_APP_HOST_PORT` | `3009`. |
 

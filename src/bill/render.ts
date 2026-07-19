@@ -42,7 +42,14 @@ const STYLES = `
   }
   .wrap { max-width:420px; margin:0 auto; }
 
-  .head { padding:6px 8px 20px; }
+  .head { padding:6px 8px 14px; }
+  .section {
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    margin:22px 8px 10px; font-size:13px; font-weight:600; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--muted);
+  }
+  .section:first-of-type { margin-top:8px; }
+  .section .sub { text-transform:none; letter-spacing:0; font-variant-numeric:tabular-nums; }
   .month { font-size:15px; font-weight:600; color:var(--muted); margin:0 0 6px; }
   .hero { display:flex; align-items:baseline; gap:12px; }
   .hero .big { font-size:64px; font-weight:800; letter-spacing:-.02em; line-height:1; color:#000; }
@@ -105,11 +112,9 @@ ${body}
 </html>`;
 }
 
-export function renderLanding(data: LandingData): string {
-  const rows = data.categories
-    .map((c) => {
-      const over = c.overspent ? ' over' : '';
-      return `<a class="cat${over}" href="/category/${encodeURIComponent(c.id)}">
+function renderCatRow(c: CategorySummary): string {
+  const over = c.overspent ? ' over' : '';
+  return `<a class="cat${over}" href="/category/${encodeURIComponent(c.id)}">
   <div class="row">
     <span class="name">${escape(c.name)}</span>
     <span class="amt">${statusAmount(c)}</span>
@@ -117,16 +122,23 @@ export function renderLanding(data: LandingData): string {
   <div class="bar"><div class="fill" style="width:${(c.fraction * 100).toFixed(1)}%"></div></div>
   <div class="meta">${formatEUR(c.spent)} of ${formatEUR(c.target)}</div>
 </a>`;
-    })
+}
+
+export function renderLanding(data: LandingData): string {
+  const sections = data.groups
+    .map(
+      (group) => `<h2 class="section"><span>${escape(group.name)}</span><span class="sub">${formatEUR(group.totalLeft)} left</span></h2>
+<section class="card">
+${group.categories.map(renderCatRow).join('\n')}
+</section>`,
+    )
     .join('\n');
 
   const body = `<header class="head">
   <p class="month">${escape(data.monthLabel)}</p>
   <div class="hero"><span class="big">${formatEUR(data.totalLeft)}</span><span class="unit">left</span></div>
 </header>
-<section class="card">
-${rows}
-</section>`;
+${sections}`;
 
   return shell("What's left", body);
 }

@@ -13,7 +13,7 @@ export type CategorySummary = {
   name: string;
   /** Money spent this month (non-negative milliunits). */
   spent: number;
-  /** Monthly target (goal, falling back to this month's budgeted). */
+  /** Total available this period (spent + left = carryover + budgeted). */
   target: number;
   /** What's left right now (YNAB balance; negative when overspent). */
   left: number;
@@ -22,10 +22,19 @@ export type CategorySummary = {
   fraction: number;
 };
 
+export type GroupSection = {
+  id: string;
+  /** Display label (the YNAB group name, minus any "joint:" prefix). */
+  name: string;
+  categories: CategorySummary[];
+  /** Sum of this group's categories' balances. */
+  totalLeft: number;
+};
+
 export type LandingData = {
   monthLabel: string;
   totalLeft: number;
-  categories: CategorySummary[];
+  groups: GroupSection[];
 };
 
 export type TransactionRow = {
@@ -53,9 +62,10 @@ const fetchJointTransactions = cached(billConfig.cacheTtlMs, () =>
 
 function toSummary(category: YnabCategory): CategorySummary {
   const spent = Math.max(0, -category.activity);
-  const goal = category.goal_target ?? 0;
-  const target = goal > 0 ? goal : category.budgeted;
   const left = category.balance;
+  // The envelope available this period: what's been spent plus what remains.
+  // Keeps the progress bar and "left" consistent even with carryover balances.
+  const target = spent + left;
   return {
     id: category.id,
     name: category.name,
@@ -67,25 +77,39 @@ function toSummary(category: YnabCategory): CategorySummary {
   };
 }
 
-async function getJointCategories(): Promise<CategorySummary[]> {
+/** "joint: bills" -> "bills"; leaves un-prefixed names untouched. */
+function displayGroupName(name: string): string {
+  const colon = name.indexOf(':');
+  return (colon >= 0 ? name.slice(colon + 1) : name).trim();
+}
+
+async function getJointGroups(): Promise<GroupSection[]> {
   const { categoryGroups } = await fetchCategoryGroups();
-  const group = categoryGroups.find((g) => g.id === billConfig.jointGroupId);
-  if (!group) throw new Error(`Joint category group ${billConfig.jointGroupId} not found in budget`);
-  return group.categories.filter((c) => !c.deleted && !c.hidden).map(toSummary);
+  return billConfig.jointGroupIds.map((groupId) => {
+    const group = categoryGroups.find((g) => g.id === groupId);
+    if (!group) throw new Error(`Joint category group ${groupId} not found in budget`);
+    const categories = group.categories.filter((c) => !c.deleted && !c.hidden).map(toSummary);
+    return {
+      id: group.id,
+      name: displayGroupName(group.name),
+      categories,
+      totalLeft: categories.reduce((sum, c) => sum + c.left, 0),
+    };
+  });
 }
 
 export async function getLandingData(): Promise<LandingData> {
-  const categories = await getJointCategories();
+  const groups = await getJointGroups();
   return {
     monthLabel: monthLabel(),
-    totalLeft: categories.reduce((sum, c) => sum + c.left, 0),
-    categories,
+    totalLeft: groups.reduce((sum, g) => sum + g.totalLeft, 0),
+    groups,
   };
 }
 
 export async function getCategoryPage(categoryId: string): Promise<CategoryPage | null> {
-  const categories = await getJointCategories();
-  const category = categories.find((c) => c.id === categoryId);
+  const groups = await getJointGroups();
+  const category = groups.flatMap((g) => g.categories).find((c) => c.id === categoryId);
   if (!category) return null;
 
   const { transactions } = await fetchJointTransactions();

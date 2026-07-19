@@ -55,7 +55,7 @@ service (`src/bill/index.ts`).
 ### Required env (in addition to `YNAB_ACCESS_TOKEN`)
 
 - `BILL_BUDGET_ID` — the plan to read
-- `BILL_JOINT_GROUP_ID` — the category group to display
+- `BILL_JOINT_GROUP_IDS` — ordered, comma-separated joint category groups (each shown as its own section)
 - `BILL_JOINT_ACCOUNT_ID` — the account to filter transactions by
 
 ### Optional env
