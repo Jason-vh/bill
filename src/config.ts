@@ -4,7 +4,7 @@ function requireEnv(name: string): string {
   return value;
 }
 
-const publicBaseUrl = (process.env.PUBLIC_BASE_URL?.trim() || 'https://ynab.mcp.vhtm.eu').replace(/\/$/, '');
+const publicBaseUrl = (process.env.PUBLIC_BASE_URL?.trim() || 'https://bill.vhtm.eu').replace(/\/$/, '');
 const oauthSessionSecret =
   process.env.OAUTH_SESSION_SECRET?.trim() || `${process.env.MCP_BEARER_TOKEN || ''}:${process.env.YNAB_ACCESS_TOKEN || ''}`;
 

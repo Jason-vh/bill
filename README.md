@@ -12,7 +12,7 @@ same YNAB client — see [Bill](#bill) below.
 
 ## Optional env
 
-- `PUBLIC_BASE_URL` (default: `https://ynab.mcp.vhtm.eu`)
+- `PUBLIC_BASE_URL` (default: `https://bill.vhtm.eu`; the MCP server is served under `/mcp`)
 - `OAUTH_LOGIN_USERNAME` (default: `json`)
 - `OAUTH_SESSION_SECRET`
 - `OAUTH_STATE_FILE`

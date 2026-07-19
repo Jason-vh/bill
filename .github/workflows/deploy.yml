@@ -28,7 +28,7 @@ jobs:
           MCP_BEARER_TOKEN=${{ secrets.MCP_BEARER_TOKEN }}
           OAUTH_LOGIN_PASSWORD=${{ secrets.OAUTH_LOGIN_PASSWORD }}
           OAUTH_SESSION_SECRET=${{ secrets.OAUTH_SESSION_SECRET }}
-          PUBLIC_BASE_URL=https://ynab.mcp.vhtm.eu
+          PUBLIC_BASE_URL=https://bill.vhtm.eu
           OAUTH_LOGIN_USERNAME=json
           MCP_APP_HOST_PORT=3008
           COMPOSE_PROJECT_NAME=bill

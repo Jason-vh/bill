@@ -3,8 +3,11 @@
 Production is live at:
 
 ```text
-https://ynab.mcp.vhtm.eu
+https://bill.vhtm.eu        # read-only budget site
+https://bill.vhtm.eu/mcp    # YNAB MCP server (OAuth)
 ```
+
+(The MCP server formerly lived at `ynab.mcp.vhtm.eu`, now retired.)
 
 Hosted on the shared `vhtm-eu` VM. The arch + conventions live in
 <https://github.com/Jason-vh/vhtm.eu>. This file is just the per-app
@@ -14,14 +17,18 @@ runbook.
 
 ```text
 client (MCP / Claude)
-  -> https://ynab.mcp.vhtm.eu/mcp
+  -> https://bill.vhtm.eu/mcp
   -> exe.dev edge (TLS termination)
   -> vhtm-eu VM :8080
-  -> Caddy (host-matched via apps/bill/deploy/caddy.snippet)
+  -> Caddy (bill.vhtm.eu; /mcp + /oauth + /.well-known -> 3008, else -> 3009)
   -> 127.0.0.1:3008
   -> bill's MCP container (Bun HTTP, Streamable MCP + OAuth)
   -> YNAB API (api.ynab.com) using the server's YNAB PAT
 ```
+
+The OAuth issuer/resource is `https://bill.vhtm.eu`, so the MCP server also owns
+the root-level `/.well-known/oauth-*` and `/oauth/*` paths on that host; the
+read-only site owns everything else (`/`, `/category/*`).
 
 No database. OAuth client registrations persist to `data/oauth-state.json`
 inside the `bill-data` Docker volume, so they survive redeploys.
@@ -30,19 +37,15 @@ inside the `bill-data` Docker volume, so they survive redeploys.
 
 | File | Purpose |
 |---|---|
-| `caddy.snippet` | Routing for `ynab.mcp.vhtm.eu` → `127.0.0.1:3008` **and** `bill.vhtm.eu` → `127.0.0.1:3009`. Imported by `/etc/caddy/Caddyfile` via `apps/*/deploy/caddy.snippet`. |
+| `caddy.snippet` | Routing for `bill.vhtm.eu` (path-split: `/mcp` + `/oauth` + `/.well-known/oauth-*` → `3008`, else → `3009`). Imported by `/etc/caddy/Caddyfile` via `apps/*/deploy/caddy.snippet`. |
 | `env.production.example` | Shape of `.env.production` (written by CI from secrets, not committed). |
 | `README.md` | This file. |
 
-## One-time exe.dev / DNS setup
+## DNS setup
 
-```bash
-# Register the hostname with the exe.dev edge:
-ssh exe.dev domain add vhtm-eu ynab.mcp.vhtm.eu
-
-# DNS at Porkbun:
-#   ynab.mcp.vhtm.eu  CNAME  vhtm-eu.exe.xyz
-```
+Both the site and the MCP server share the `bill.vhtm.eu` host, so no extra DNS
+is needed beyond the one-time bill setup (Porkbun `bill.vhtm.eu CNAME
+vhtm-eu.exe.xyz` + `ssh exe.dev domain add vhtm-eu bill.vhtm.eu`).
 
 ## GitHub Actions secrets
 
@@ -83,15 +86,15 @@ docker compose --env-file .env.production restart app
 ## Public checks
 
 ```bash
-# Health:
+# Site health:
 curl -s https://bill.vhtm.eu/health   # {"ok":true,"service":"bill"}
-curl -s https://ynab.mcp.vhtm.eu/health
 
-# OAuth protected-resource metadata:
-curl -s https://ynab.mcp.vhtm.eu/.well-known/oauth-protected-resource/mcp
+# OAuth metadata (issuer should be https://bill.vhtm.eu):
+curl -s https://bill.vhtm.eu/.well-known/oauth-authorization-server
+curl -s https://bill.vhtm.eu/.well-known/oauth-protected-resource/mcp
 
 # MCP endpoint should 401 without a token:
-curl -s -o /dev/null -w '%{http_code}\n' -X POST https://ynab.mcp.vhtm.eu/mcp
+curl -s -o /dev/null -w '%{http_code}\n' -X POST https://bill.vhtm.eu/mcp
 ```
 
 ## Bill — bill.vhtm.eu (co-located second service)

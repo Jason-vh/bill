@@ -1,9 +1,11 @@
-@ynab-mcp host ynab.mcp.vhtm.eu
-handle @ynab-mcp {
-	reverse_proxy 127.0.0.1:3008
-}
-
 @bill host bill.vhtm.eu
 handle @bill {
-	reverse_proxy 127.0.0.1:3009
+	# OAuth + MCP paths -> MCP server (3008); everything else -> the site (3009).
+	@mcp path /mcp* /oauth/* /.well-known/oauth-authorization-server /.well-known/oauth-protected-resource*
+	handle @mcp {
+		reverse_proxy 127.0.0.1:3008
+	}
+	handle {
+		reverse_proxy 127.0.0.1:3009
+	}
 }
