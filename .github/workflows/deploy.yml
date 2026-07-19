@@ -32,6 +32,10 @@ jobs:
           OAUTH_LOGIN_USERNAME=json
           MCP_APP_HOST_PORT=3008
           COMPOSE_PROJECT_NAME=mcp
+          BILL_APP_HOST_PORT=3009
+          BILL_BUDGET_ID=73e2b89c-05df-4a93-b0dd-95d9a9bf6bc2
+          BILL_JOINT_GROUP_ID=de79d1b8-2b99-406c-8422-2d59cdca9d3c
+          BILL_JOINT_ACCOUNT_ID=13c7e3c0-0abf-4198-ab4f-b038bf7a8864
           EOF
 
       - name: Copy checkout to stable deploy directory

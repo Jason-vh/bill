@@ -50,6 +50,23 @@ export type YnabCategory = {
   balance: number;
   balance_formatted?: string;
   balance_currency?: number;
+  goal_type?: string | null;
+  goal_target?: number | null;
+  goal_overall_left?: number | null;
+  goal_percentage_complete?: number | null;
+};
+
+export type YnabSubTransaction = {
+  id: string;
+  transaction_id: string;
+  amount: number;
+  memo: string | null;
+  payee_id: string | null;
+  payee_name: string | null;
+  category_id: string | null;
+  category_name: string | null;
+  transfer_account_id: string | null;
+  deleted: boolean;
 };
 
 export type YnabCategoryGroup = {
@@ -85,5 +102,5 @@ export type YnabTransaction = {
   import_payee_name_original?: string | null;
   debt_transaction_type?: string | null;
   deleted: boolean;
-  subtransactions?: unknown[];
+  subtransactions?: YnabSubTransaction[];
 };

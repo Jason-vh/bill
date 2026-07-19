@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "start": "bun run src/index.ts",
+    "bill": "bun run src/bill/index.ts",
+    "bill:dev": "bun --watch src/bill/index.ts",
     "check": "bunx tsc --noEmit"
   },
   "dependencies": {

@@ -1,10 +1,10 @@
-import { config } from './config.ts';
 import type {
   YnabAccount,
   YnabCategoryGroup,
   YnabPlanSummary,
   YnabTransaction,
 } from './types.ts';
+import { ynabConfig } from './ynabConfig.ts';
 
 const API_BASE = 'https://api.ynab.com/v1';
 
@@ -21,7 +21,7 @@ async function ynabRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
-      Authorization: `Bearer ${config.ynabAccessToken}`,
+      Authorization: `Bearer ${ynabConfig.accessToken}`,
       Accept: 'application/json',
       ...(init?.headers ?? {}),
     },
@@ -59,7 +59,7 @@ export async function listPlans(): Promise<{
 
 export async function resolvePlanId(requestedPlanId?: string): Promise<string> {
   if (requestedPlanId?.trim()) return requestedPlanId.trim();
-  if (config.defaultPlanId) return config.defaultPlanId;
+  if (ynabConfig.defaultPlanId) return ynabConfig.defaultPlanId;
 
   const { plans, defaultPlan } = await listPlans();
   if (defaultPlan?.id) return defaultPlan.id;
@@ -92,6 +92,21 @@ export async function getTransactions(options?: {
 
   const query = params.size ? `?${params.toString()}` : '';
   const data = await ynabGet<{ transactions: YnabTransaction[] }>(`/plans/${resolved}/transactions${query}`);
+  return { planId: resolved, transactions: data.transactions };
+}
+
+export async function getAccountTransactions(options: {
+  planId?: string;
+  accountId: string;
+  sinceDate?: string;
+}): Promise<{ planId: string; transactions: YnabTransaction[] }> {
+  const resolved = await resolvePlanId(options.planId);
+  const params = new URLSearchParams();
+  if (options.sinceDate) params.set('since_date', options.sinceDate);
+  const query = params.size ? `?${params.toString()}` : '';
+  const data = await ynabGet<{ transactions: YnabTransaction[] }>(
+    `/plans/${resolved}/accounts/${options.accountId}/transactions${query}`,
+  );
   return { planId: resolved, transactions: data.transactions };
 }
 

@@ -13,6 +13,19 @@ services:
     networks:
       - apps-net
 
+  bill:
+    build: .
+    restart: unless-stopped
+    command: ["bun", "run", "src/bill/index.ts"]
+    env_file:
+      - .env.production
+    environment:
+      BILL_PORT: 3009
+    ports:
+      - "127.0.0.1:${BILL_APP_HOST_PORT:-3009}:3009"
+    networks:
+      - apps-net
+
 volumes:
   mcp-data:
 
