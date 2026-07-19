@@ -6,17 +6,17 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: mcp-production
+  group: bill-production
   cancel-in-progress: true
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  DEPLOY_DIR: /home/exedev/apps/mcp
+  DEPLOY_DIR: /home/exedev/apps/bill
 
 jobs:
   deploy:
     name: Deploy to exe.dev VM
-    runs-on: [self-hosted, linux, mcp-prod]
+    runs-on: [self-hosted, linux, bill-prod]
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -31,7 +31,7 @@ jobs:
           PUBLIC_BASE_URL=https://ynab.mcp.vhtm.eu
           OAUTH_LOGIN_USERNAME=json
           MCP_APP_HOST_PORT=3008
-          COMPOSE_PROJECT_NAME=mcp
+          COMPOSE_PROJECT_NAME=bill
           BILL_APP_HOST_PORT=3009
           BILL_BUDGET_ID=73e2b89c-05df-4a93-b0dd-95d9a9bf6bc2
           BILL_JOINT_GROUP_ID=de79d1b8-2b99-406c-8422-2d59cdca9d3c

@@ -129,7 +129,7 @@ const app = Bun.serve({
     if (url.pathname === '/health') {
       return json({
         ok: true,
-        service: 'ynab-mcp',
+        service: 'bill-mcp',
         version: '0.2.0',
         readOnly: true,
         oauthEnabled: true,
@@ -182,7 +182,7 @@ const app = Bun.serve({
   },
 });
 
-console.log(`ynab-mcp listening on http://localhost:${app.port}`);
+console.log(`bill-mcp listening on http://localhost:${app.port}`);
 console.log(`health: http://localhost:${app.port}/health`);
 console.log(`mcp: http://localhost:${app.port}/mcp`);
 console.log(`issuer: ${config.publicBaseUrl}`);

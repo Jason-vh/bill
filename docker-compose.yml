@@ -9,7 +9,7 @@ services:
     ports:
       - "127.0.0.1:${MCP_APP_HOST_PORT:-3008}:3000"
     volumes:
-      - mcp-data:/app/data
+      - bill-data:/app/data
     networks:
       - apps-net
 
@@ -27,7 +27,7 @@ services:
       - apps-net
 
 volumes:
-  mcp-data:
+  bill-data:
 
 networks:
   apps-net:

@@ -1,4 +1,4 @@
-# ynab-mcp
+# bill
 
 Remote MCP server for YNAB, built with Bun + TypeScript. This repo also hosts
 **Bill** (`src/bill/`), a read-only joint-budget status site that reuses the

@@ -1,4 +1,4 @@
-# exe.dev deployment — ynab-mcp
+# exe.dev deployment — bill
 
 Production is live at:
 
@@ -17,14 +17,14 @@ client (MCP / Claude)
   -> https://ynab.mcp.vhtm.eu/mcp
   -> exe.dev edge (TLS termination)
   -> vhtm-eu VM :8080
-  -> Caddy (host-matched via apps/mcp/deploy/caddy.snippet)
+  -> Caddy (host-matched via apps/bill/deploy/caddy.snippet)
   -> 127.0.0.1:3008
-  -> ynab-mcp container (Bun HTTP, Streamable MCP + OAuth)
+  -> bill's MCP container (Bun HTTP, Streamable MCP + OAuth)
   -> YNAB API (api.ynab.com) using the server's YNAB PAT
 ```
 
 No database. OAuth client registrations persist to `data/oauth-state.json`
-inside the `mcp-data` Docker volume, so they survive redeploys.
+inside the `bill-data` Docker volume, so they survive redeploys.
 
 ## Files in this directory
 
@@ -57,9 +57,9 @@ ssh exe.dev domain add vhtm-eu ynab.mcp.vhtm.eu
 
 Every push to `main`:
 
-1. Runs on the self-hosted runner labeled `mcp-prod`.
+1. Runs on the self-hosted runner labeled `bill-prod`.
 2. Writes `.env.production` from GitHub Actions secrets.
-3. Copies the checkout into `/home/exedev/apps/mcp`.
+3. Copies the checkout into `/home/exedev/apps/bill`.
 4. `docker compose up -d --build` from that stable directory.
 5. `caddy validate` + `systemctl reload caddy` so any change to
    `deploy/caddy.snippet` takes effect.
@@ -68,7 +68,7 @@ Every push to `main`:
 
 ```bash
 ssh vhtm-eu.exe.xyz
-cd /home/exedev/apps/mcp
+cd /home/exedev/apps/bill
 
 # Container status:
 docker compose --env-file .env.production ps
@@ -99,7 +99,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST https://ynab.mcp.vhtm.eu/mcp
 Bill is a read-only, unauthenticated joint-budget status site that reuses this
 repo's YNAB client. It runs as a **second Docker service** (`bill`) in the same
 `docker-compose.yml`, on `127.0.0.1:3009`, deployed by the same push and the
-same `mcp-prod` runner. No database; it caches YNAB responses in memory (~5 min).
+same `bill-prod` runner. No database; it caches YNAB responses in memory (~5 min).
 
 ```text
 client -> https://bill.vhtm.eu -> exe.dev edge -> vhtm-eu VM :8080
@@ -132,14 +132,14 @@ Also add the inventory row to <https://github.com/Jason-vh/vhtm.eu> in
 `apps/README.md`:
 
 ```text
-| bill    | `bill.vhtm.eu`   | `3009`   | `github.com/Jason-vh/mcp` | `gh-actions-runner-mcp.service` |
+| bill    | `bill.vhtm.eu`   | `3009`   | `github.com/Jason-vh/bill` | `gh-actions-runner-bill.service` |
 ```
 
 ### Bill operations
 
 ```bash
 ssh vhtm-eu.exe.xyz
-cd /home/exedev/apps/mcp
+cd /home/exedev/apps/bill
 docker compose --env-file .env.production logs -f bill
 docker compose --env-file .env.production restart bill
 ```
