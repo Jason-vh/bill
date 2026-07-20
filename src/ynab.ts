@@ -1,5 +1,6 @@
 import type {
   YnabAccount,
+  YnabCategory,
   YnabCategoryGroup,
   YnabPlanSummary,
   YnabTransaction,
@@ -78,6 +79,27 @@ export async function getCategories(planId?: string): Promise<{ planId: string; 
   const resolved = await resolvePlanId(planId);
   const data = await ynabGet<{ category_groups: YnabCategoryGroup[] }>(`/plans/${resolved}/categories`);
   return { planId: resolved, categoryGroups: data.category_groups };
+}
+
+/**
+ * Category state for a specific budget month. Unlike /categories (current month
+ * only), this returns each category's activity/balance for the given month.
+ * `month` must be an ISO date on the first of the month, e.g. "2026-07-01".
+ */
+export async function getMonthCategories(
+  planId: string | undefined,
+  month: string,
+): Promise<{ planId: string; categories: YnabCategory[] }> {
+  const resolved = await resolvePlanId(planId);
+  const data = await ynabGet<{ month: { categories: YnabCategory[] } }>(`/plans/${resolved}/months/${month}`);
+  return { planId: resolved, categories: data.month.categories };
+}
+
+/** The plan summary (for its first_month / last_month bounds), or null if not found. */
+export async function getPlan(planId?: string): Promise<YnabPlanSummary | null> {
+  const resolved = await resolvePlanId(planId);
+  const { plans } = await listPlans();
+  return plans.find((plan) => plan.id === resolved) ?? null;
 }
 
 export async function getTransactions(options?: {

@@ -30,13 +30,15 @@ const server = Bun.serve({
     }
 
     try {
+      const month = url.searchParams.get('month') ?? undefined;
+
       if (url.pathname === '/') {
-        return html(renderLanding(await getLandingData()));
+        return html(renderLanding(await getLandingData(month)));
       }
 
       const match = url.pathname.match(/^\/category\/([^/]+)\/?$/);
       if (match) {
-        const page = await getCategoryPage(decodeURIComponent(match[1]));
+        const page = await getCategoryPage(decodeURIComponent(match[1]), month);
         return page ? html(renderCategory(page)) : html(renderNotFound(), 404);
       }
 

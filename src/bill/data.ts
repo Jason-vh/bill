@@ -2,11 +2,11 @@
 // Two upstream calls, both cached: joint categories + the joint account's
 // current-month transactions.
 
-import { getAccountTransactions, getCategories } from '../ynab.ts';
+import { getAccountTransactions, getMonthCategories, getPlan } from '../ynab.ts';
 import type { YnabCategory } from '../types.ts';
-import { cached } from './cache.ts';
+import { cached, cachedBy } from './cache.ts';
 import { billConfig } from './config.ts';
-import { currentMonthStart, monthLabel } from './dates.ts';
+import { addMonths, currentMonthKey, isMonthKey, monthLabel, monthStartDate } from './dates.ts';
 
 export type CategorySummary = {
   id: string;
@@ -31,8 +31,16 @@ export type GroupSection = {
   totalLeft: number;
 };
 
+/** Month selector state: the chosen month plus adjacent keys to page to (null = at a bound). */
+export type MonthNav = {
+  key: string;
+  label: string;
+  prev: string | null;
+  next: string | null;
+};
+
 export type LandingData = {
-  monthLabel: string;
+  nav: MonthNav;
   totalLeft: number;
   groups: GroupSection[];
 };
@@ -46,19 +54,52 @@ export type TransactionRow = {
 
 export type CategoryPage = {
   category: CategorySummary;
-  monthLabel: string;
+  nav: MonthNav;
   transactions: TransactionRow[];
 };
 
-const fetchCategoryGroups = cached(billConfig.cacheTtlMs, () => getCategories(billConfig.budgetId));
+// Per-month caches: each month key gets its own TTL entry so paging between
+// months never refetches a month that's already warm.
+const fetchMonthCategories = cachedBy(billConfig.cacheTtlMs, (month) =>
+  getMonthCategories(billConfig.budgetId, monthStartDate(month)),
+);
 
-const fetchJointTransactions = cached(billConfig.cacheTtlMs, () =>
+const fetchMonthTransactions = cachedBy(billConfig.cacheTtlMs, (month) =>
   getAccountTransactions({
     planId: billConfig.budgetId,
     accountId: billConfig.jointAccountId,
-    sinceDate: currentMonthStart(),
+    sinceDate: monthStartDate(month),
   }),
 );
+
+const fetchPlan = cached(billConfig.cacheTtlMs, () => getPlan(billConfig.budgetId));
+
+/** Plan's earliest budgeted month as a key ("YYYY-MM"), falling back to `fallback`. */
+async function firstMonthKey(fallback: string): Promise<string> {
+  const plan = await fetchPlan();
+  return plan?.first_month ? plan.first_month.slice(0, 7) : fallback;
+}
+
+/** Clamp a requested month key into [plan first month, current month]. */
+async function resolveMonth(requested?: string): Promise<string> {
+  const current = currentMonthKey();
+  let month = requested && isMonthKey(requested) ? requested : current;
+  if (month > current) month = current;
+  const first = await firstMonthKey(month);
+  if (month < first) month = first;
+  return month;
+}
+
+async function buildNav(month: string): Promise<MonthNav> {
+  const current = currentMonthKey();
+  const first = await firstMonthKey(month);
+  return {
+    key: month,
+    label: monthLabel(month),
+    prev: month > first ? addMonths(month, -1) : null,
+    next: month < current ? addMonths(month, 1) : null,
+  };
+}
 
 function toSummary(category: YnabCategory): CategorySummary {
   const spent = Math.max(0, -category.activity);
@@ -83,40 +124,45 @@ function displayGroupName(name: string): string {
   return (colon >= 0 ? name.slice(colon + 1) : name).trim();
 }
 
-async function getJointGroups(): Promise<GroupSection[]> {
-  const { categoryGroups } = await fetchCategoryGroups();
+async function getJointGroups(month: string): Promise<GroupSection[]> {
+  const { categories } = await fetchMonthCategories(month);
   return billConfig.jointGroupIds.map((groupId) => {
-    const group = categoryGroups.find((g) => g.id === groupId);
-    if (!group) throw new Error(`Joint category group ${groupId} not found in budget`);
-    const categories = group.categories.filter((c) => !c.deleted && !c.hidden).map(toSummary);
+    const inGroup = categories.filter((c) => c.category_group_id === groupId && !c.deleted);
+    if (inGroup.length === 0) throw new Error(`Joint category group ${groupId} not found for ${month}`);
+    const visible = inGroup.filter((c) => !c.hidden).map(toSummary);
     return {
-      id: group.id,
-      name: displayGroupName(group.name),
-      categories,
-      totalLeft: categories.reduce((sum, c) => sum + c.left, 0),
+      id: groupId,
+      name: displayGroupName(inGroup[0].category_group_name),
+      categories: visible,
+      totalLeft: visible.reduce((sum, c) => sum + c.left, 0),
     };
   });
 }
 
-export async function getLandingData(): Promise<LandingData> {
-  const groups = await getJointGroups();
+export async function getLandingData(requestedMonth?: string): Promise<LandingData> {
+  const month = await resolveMonth(requestedMonth);
+  const [groups, nav] = await Promise.all([getJointGroups(month), buildNav(month)]);
   return {
-    monthLabel: monthLabel(),
+    nav,
     totalLeft: groups.reduce((sum, g) => sum + g.totalLeft, 0),
     groups,
   };
 }
 
-export async function getCategoryPage(categoryId: string): Promise<CategoryPage | null> {
-  const groups = await getJointGroups();
+export async function getCategoryPage(categoryId: string, requestedMonth?: string): Promise<CategoryPage | null> {
+  const month = await resolveMonth(requestedMonth);
+  const groups = await getJointGroups(month);
   const category = groups.flatMap((g) => g.categories).find((c) => c.id === categoryId);
   if (!category) return null;
 
-  const { transactions } = await fetchJointTransactions();
+  const { transactions } = await fetchMonthTransactions(month);
+  // since_date only bounds the lower edge, so drop anything from later months.
+  const nextMonthStart = monthStartDate(addMonths(month, 1));
   const rows: TransactionRow[] = [];
 
   for (const txn of transactions) {
     if (txn.deleted) continue;
+    if (txn.date >= nextMonthStart) continue;
 
     if (txn.subtransactions && txn.subtransactions.length > 0) {
       for (const sub of txn.subtransactions) {
@@ -138,5 +184,5 @@ export async function getCategoryPage(categoryId: string): Promise<CategoryPage 
 
   rows.sort((a, b) => b.date.localeCompare(a.date));
 
-  return { category, monthLabel: monthLabel(), transactions: rows };
+  return { category, nav: await buildNav(month), transactions: rows };
 }

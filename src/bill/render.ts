@@ -2,7 +2,7 @@
 
 import { formatEUR } from './money.ts';
 import { shortDate } from './dates.ts';
-import type { CategoryPage, CategorySummary, LandingData } from './data.ts';
+import type { CategoryPage, CategorySummary, LandingData, MonthNav } from './data.ts';
 
 function escape(value: string): string {
   return value
@@ -43,6 +43,20 @@ const STYLES = `
   .wrap { max-width:420px; margin:0 auto; }
 
   .head { padding:6px 8px 14px; }
+  .monthnav {
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:2px 2px 12px;
+  }
+  .monthnav .label { font-size:15px; font-weight:600; color:var(--muted); }
+  .nav-btn {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:34px; height:34px; border-radius:50%; flex:none;
+    font-size:22px; line-height:1; text-decoration:none; color:var(--link);
+    background:var(--card); border:1px solid var(--card-border);
+    -webkit-backdrop-filter:blur(24px) saturate(140%); backdrop-filter:blur(24px) saturate(140%);
+  }
+  .nav-btn:hover { opacity:.75; }
+  .nav-btn.disabled { color:var(--muted); opacity:.3; pointer-events:none; }
   .section {
     display:flex; align-items:baseline; justify-content:space-between; gap:12px;
     margin:22px 8px 10px; font-size:13px; font-weight:600; letter-spacing:.06em;
@@ -112,9 +126,18 @@ ${body}
 </html>`;
 }
 
-function renderCatRow(c: CategorySummary): string {
+/** Prev/label/next month pager. `baseHref` is the page URL the arrows link to. */
+function renderMonthNav(baseHref: string, nav: MonthNav): string {
+  const arrow = (key: string | null, glyph: string, label: string) =>
+    key
+      ? `<a class="nav-btn" href="${baseHref}?month=${key}" aria-label="${label}">${glyph}</a>`
+      : `<span class="nav-btn disabled" aria-hidden="true">${glyph}</span>`;
+  return `<nav class="monthnav">${arrow(nav.prev, '‹', 'Previous month')}<span class="label">${escape(nav.label)}</span>${arrow(nav.next, '›', 'Next month')}</nav>`;
+}
+
+function renderCatRow(c: CategorySummary, month: string): string {
   const over = c.overspent ? ' over' : '';
-  return `<a class="cat${over}" href="/category/${encodeURIComponent(c.id)}">
+  return `<a class="cat${over}" href="/category/${encodeURIComponent(c.id)}?month=${month}">
   <div class="row">
     <span class="name">${escape(c.name)}</span>
     <span class="amt">${statusAmount(c)}</span>
@@ -125,17 +148,18 @@ function renderCatRow(c: CategorySummary): string {
 }
 
 export function renderLanding(data: LandingData): string {
+  const month = data.nav.key;
   const sections = data.groups
     .map(
       (group) => `<h2 class="section"><span>${escape(group.name)}</span><span class="sub">${formatEUR(group.totalLeft)} left</span></h2>
 <section class="card">
-${group.categories.map(renderCatRow).join('\n')}
+${group.categories.map((c) => renderCatRow(c, month)).join('\n')}
 </section>`,
     )
     .join('\n');
 
   const body = `<header class="head">
-  <p class="month">${escape(data.monthLabel)}</p>
+  ${renderMonthNav('/', data.nav)}
   <div class="hero"><span class="big">${formatEUR(data.totalLeft)}</span><span class="unit">left</span></div>
 </header>
 ${sections}`;
@@ -144,7 +168,7 @@ ${sections}`;
 }
 
 export function renderCategory(page: CategoryPage): string {
-  const { category } = page;
+  const { category, nav } = page;
   const status = category.overspent
     ? `${formatEUR(category.left)} over`
     : `${formatEUR(category.left)} left`;
@@ -164,11 +188,13 @@ export function renderCategory(page: CategoryPage): string {
           )
           .join('\n');
 
-  const body = `<a class="back" href="/">&lsaquo; Budget</a>
+  const categoryHref = `/category/${encodeURIComponent(category.id)}`;
+  const body = `<a class="back" href="/?month=${nav.key}">&lsaquo; Budget</a>
 <header class="title">
   <h1>${escape(category.name)}</h1>
   <p class="sub">${status} \u00b7 ${formatEUR(category.spent)} of ${formatEUR(category.target)}</p>
 </header>
+${renderMonthNav(categoryHref, nav)}
 <section class="card">
 ${list}
 </section>`;
