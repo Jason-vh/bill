@@ -28,7 +28,7 @@ const STYLES = `
     color-scheme:light;
   }
   * { box-sizing:border-box; }
-  html { background:#e9e6ef; }
+  html { background:#eef1f8; }
   html, body { min-height:100%; }
   body {
     margin:0; color:var(--ink);
@@ -46,8 +46,8 @@ const STYLES = `
     background:
       radial-gradient(80% 70% at -10% 50%, #f7d3a4 0%, rgba(247,211,164,0) 55%),
       radial-gradient(80% 70% at 110% 46%, #b6cbf1 0%, rgba(182,203,241,0) 55%),
-      radial-gradient(115% 50% at 50% 68%, #f2c3df 0%, rgba(242,195,223,0) 60%),
-      #e9e6ef;
+      radial-gradient(120% 48% at 50% 72%, #f2c3df 0%, rgba(242,195,223,0) 58%),
+      #eef1f8;
   }
   .wrap { max-width:420px; margin:0 auto; }
 
