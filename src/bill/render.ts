@@ -36,15 +36,16 @@ const STYLES = `
     -webkit-font-smoothing:antialiased;
     padding:max(env(safe-area-inset-top),20px) 16px max(env(safe-area-inset-bottom),28px);
   }
-  /* Full-bleed gradient locked to the viewport, covering the safe areas. A
-     fixed layer (not background-attachment:fixed, which iOS mis-sizes) paints
-     behind the status bar and home indicator edge-to-edge. */
+  /* Viewport-locked wash. The very top edge is left at the base colour so it
+     matches the solid fill iOS paints behind the status bar (iOS uses the page
+     background-COLOUR there, never a background image). Colour blooms in from
+     the sides and bottom instead of the top corners, so there's no seam. */
   body::before {
     content:""; position:fixed; inset:0; z-index:-1;
     background:
-      radial-gradient(120% 85% at 0% 0%, #f7d3a4 0%, rgba(247,211,164,0) 46%),
-      radial-gradient(120% 90% at 100% 0%, #b6cbf1 0%, rgba(182,203,241,0) 52%),
-      radial-gradient(130% 100% at 50% 100%, #f2c3df 0%, rgba(242,195,223,0) 58%),
+      radial-gradient(80% 70% at -10% 50%, #f7d3a4 0%, rgba(247,211,164,0) 55%),
+      radial-gradient(80% 70% at 110% 46%, #b6cbf1 0%, rgba(182,203,241,0) 55%),
+      radial-gradient(115% 80% at 50% 116%, #f2c3df 0%, rgba(242,195,223,0) 60%),
       #e9e6ef;
   }
   .wrap { max-width:420px; margin:0 auto; }
