@@ -2,7 +2,7 @@
 // Two upstream calls, both cached: joint categories + the joint account's
 // current-month transactions.
 
-import { getAccountTransactions, getMonthCategories, getPlan } from '../ynab.ts';
+import { getAccountTransactions, getAccounts, getMonthCategories, getPlan } from '../ynab.ts';
 import type { YnabCategory } from '../types.ts';
 import { cached, cachedBy } from './cache.ts';
 import { billConfig } from './config.ts';
@@ -39,9 +39,18 @@ export type MonthNav = {
   next: string | null;
 };
 
+/** The joint bank account's live balance (only shown for the current month). */
+export type AccountBalance = {
+  name: string;
+  /** Signed milliunits (YNAB working balance). */
+  balance: number;
+};
+
 export type LandingData = {
   nav: MonthNav;
   totalLeft: number;
+  /** Joint account balance, or null when viewing a past month. */
+  account: AccountBalance | null;
   groups: GroupSection[];
 };
 
@@ -73,6 +82,15 @@ const fetchMonthTransactions = cachedBy(billConfig.cacheTtlMs, (month) =>
 );
 
 const fetchPlan = cached(billConfig.cacheTtlMs, () => getPlan(billConfig.budgetId));
+
+const fetchAccounts = cached(billConfig.cacheTtlMs, () => getAccounts(billConfig.budgetId));
+
+/** The configured joint account's live balance, or null if it can't be found. */
+async function jointAccount(): Promise<AccountBalance | null> {
+  const { accounts } = await fetchAccounts();
+  const account = accounts.find((a) => a.id === billConfig.jointAccountId && !a.deleted);
+  return account ? { name: account.name, balance: account.balance } : null;
+}
 
 /** Plan's earliest budgeted month as a key ("YYYY-MM"), falling back to `fallback`. */
 async function firstMonthKey(fallback: string): Promise<string> {
@@ -141,10 +159,16 @@ async function getJointGroups(month: string): Promise<GroupSection[]> {
 
 export async function getLandingData(requestedMonth?: string): Promise<LandingData> {
   const month = await resolveMonth(requestedMonth);
-  const [groups, nav] = await Promise.all([getJointGroups(month), buildNav(month)]);
+  const isCurrent = month === currentMonthKey();
+  const [groups, nav, account] = await Promise.all([
+    getJointGroups(month),
+    buildNav(month),
+    isCurrent ? jointAccount() : Promise.resolve(null),
+  ]);
   return {
     nav,
     totalLeft: groups.reduce((sum, g) => sum + g.totalLeft, 0),
+    account,
     groups,
   };
 }

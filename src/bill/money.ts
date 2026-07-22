@@ -14,8 +14,12 @@ const cents = new Intl.NumberFormat('nl-NL', {
   maximumFractionDigits: 2,
 });
 
-/** Format milliunits as EUR. Always non-negative magnitude; callers add signs. */
-export function formatEUR(milliunits: number, options?: { decimals?: boolean }): string {
+/**
+ * Format milliunits as EUR. By default returns a non-negative magnitude and
+ * lets callers add signs; pass `sign: true` to prefix a minus for negatives.
+ */
+export function formatEUR(milliunits: number, options?: { decimals?: boolean; sign?: boolean }): string {
   const euros = Math.abs(milliunits) / 1000;
-  return (options?.decimals ? cents : whole).format(euros);
+  const formatted = (options?.decimals ? cents : whole).format(euros);
+  return options?.sign && milliunits < 0 ? `\u2212${formatted}` : formatted;
 }

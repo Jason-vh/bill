@@ -68,6 +68,8 @@ const STYLES = `
   .hero { display:flex; align-items:baseline; gap:12px; }
   .hero .big { font-size:64px; font-weight:800; letter-spacing:-.02em; line-height:1; color:#000; }
   .hero .unit { font-size:24px; font-weight:600; color:var(--muted); }
+  .account { margin:10px 2px 0; font-size:15px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .account b { font-weight:600; color:var(--ink); }
 
   .card {
     background:var(--card); border:1px solid var(--card-border); border-radius:24px;
@@ -158,9 +160,13 @@ ${group.categories.map((c) => renderCatRow(c, month)).join('\n')}
     )
     .join('\n');
 
+  const account = data.account
+    ? `<p class="account"><b>${formatEUR(data.account.balance, { decimals: true, sign: true })}</b> in ${escape(data.account.name)}</p>`
+    : '';
   const body = `<header class="head">
   ${renderMonthNav('/', data.nav)}
   <div class="hero"><span class="big">${formatEUR(data.totalLeft)}</span><span class="unit">left</span></div>
+  ${account}
 </header>
 ${sections}`;
 
