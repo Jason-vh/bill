@@ -28,18 +28,24 @@ const STYLES = `
     color-scheme:light;
   }
   * { box-sizing:border-box; }
+  html { background:#e9e6ef; }
   html, body { min-height:100%; }
   body {
     margin:0; color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     -webkit-font-smoothing:antialiased;
+    padding:max(env(safe-area-inset-top),20px) 16px max(env(safe-area-inset-bottom),28px);
+  }
+  /* Full-bleed gradient locked to the viewport, covering the safe areas. A
+     fixed layer (not background-attachment:fixed, which iOS mis-sizes) paints
+     behind the status bar and home indicator edge-to-edge. */
+  body::before {
+    content:""; position:fixed; inset:0; z-index:-1;
     background:
       radial-gradient(120% 85% at 0% 0%, #f7d3a4 0%, rgba(247,211,164,0) 46%),
       radial-gradient(120% 90% at 100% 0%, #b6cbf1 0%, rgba(182,203,241,0) 52%),
       radial-gradient(130% 100% at 50% 100%, #f2c3df 0%, rgba(242,195,223,0) 58%),
       #e9e6ef;
-    background-attachment:fixed;
-    padding:max(env(safe-area-inset-top),20px) 16px max(env(safe-area-inset-bottom),28px);
   }
   .wrap { max-width:420px; margin:0 auto; }
 
@@ -135,7 +141,6 @@ export function shellHead(title: string): string {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="robots" content="noindex" />
-<meta name="theme-color" content="#e9e6ef" />
 <title>${escape(title)}</title>
 <style>${STYLES}</style>
 </head>
