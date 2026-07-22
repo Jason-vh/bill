@@ -20,6 +20,7 @@ function statusAmount(category: CategorySummary): string {
 }
 
 const STYLES = `
+  @view-transition { navigation: auto; }
   :root {
     --ink:#1c1c1e; --muted:#8a8a8e; --line:rgba(60,60,67,.12);
     --track:rgba(120,120,128,.22); --blue:#0a84ff; --link:#007aff; --red:#ff3b30;
@@ -107,9 +108,27 @@ const STYLES = `
   .date { font-size:14px; color:var(--muted); margin-top:2px; }
   .txn .amt { font-size:19px; font-weight:700; white-space:nowrap; }
   .empty { text-align:center; color:var(--muted); font-size:17px; padding:40px 20px; }
+
+  @keyframes sk-shimmer { to { background-position:-200% 0; } }
+  .sk {
+    background:linear-gradient(90deg, rgba(255,255,255,.25) 25%, rgba(255,255,255,.6) 37%, rgba(255,255,255,.25) 63%);
+    background-size:200% 100%; animation:sk-shimmer 1.4s ease-in-out infinite; border-radius:10px;
+  }
+  .sk-label { display:inline-block; width:120px; height:15px; }
+  .sk-hero { display:inline-block; width:62%; height:52px; border-radius:14px; }
+  .sk-row { height:22px; margin:18px 22px; }
 `;
 
-function shell(title: string, body: string): string {
+// Native prefetch/prerender hints: prerender the adjacent-month arrows on hover
+// (instant paging) and prefetch category rows + the back link. Ignored by
+// browsers without Speculation Rules support.
+const SPECULATION_RULES = `<script type="speculationrules">${JSON.stringify({
+  prerender: [{ source: 'document', where: { selector_matches: '.nav-btn' }, eagerness: 'moderate' }],
+  prefetch: [{ source: 'document', where: { selector_matches: '.cat, .back' }, eagerness: 'moderate' }],
+})}</script>`;
+
+/** Document open through the opening <main>. Flushed first when streaming. */
+export function shellHead(title: string): string {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -122,10 +141,20 @@ function shell(title: string, body: string): string {
 </head>
 <body>
 <main class="wrap">
-${body}
+`;
+}
+
+/** Closing markup plus prefetch/prerender hints. Flushed last when streaming. */
+export function shellFoot(): string {
+  return `
 </main>
+${SPECULATION_RULES}
 </body>
 </html>`;
+}
+
+function shell(title: string, body: string): string {
+  return shellHead(title) + body + shellFoot();
 }
 
 /** Prev/label/next month pager. `baseHref` is the page URL the arrows link to. */
@@ -149,7 +178,7 @@ function renderCatRow(c: CategorySummary, month: string): string {
 </a>`;
 }
 
-export function renderLanding(data: LandingData): string {
+export function renderLandingBody(data: LandingData): string {
   const month = data.nav.key;
   const sections = data.groups
     .map(
@@ -163,15 +192,35 @@ ${group.categories.map((c) => renderCatRow(c, month)).join('\n')}
   const account = data.account
     ? `<p class="account"><b>${formatEUR(data.account.balance, { decimals: true, sign: true })}</b> in ${escape(data.account.name)}</p>`
     : '';
-  const body = `<header class="head">
+
+  return `<header class="head">
   ${renderMonthNav('/', data.nav)}
   <div class="hero"><span class="big">${formatEUR(data.totalLeft)}</span><span class="unit">left</span></div>
   ${account}
 </header>
 ${sections}`;
-
-  return shell("What's left", body);
 }
+
+export function renderLanding(data: LandingData): string {
+  return shell("What's left", renderLandingBody(data));
+}
+
+/** Placeholder streamed instantly while the landing data loads. */
+export function renderLandingSkeleton(): string {
+  const rows = Array.from({ length: 4 }, () => '<div class="sk sk-row"></div>').join('\n');
+  return `<div id="bill-skeleton" aria-hidden="true">
+<header class="head">
+  <nav class="monthnav"><span class="nav-btn disabled" aria-hidden="true">\u2039</span><span class="sk sk-label"></span><span class="nav-btn disabled" aria-hidden="true">\u203a</span></nav>
+  <div class="hero"><span class="sk sk-hero"></span></div>
+</header>
+<section class="card">
+${rows}
+</section>
+</div>`;
+}
+
+/** Hides the streamed skeleton once the real content follows it. */
+export const REVEAL_SKELETON = '<style>#bill-skeleton{display:none}</style>';
 
 export function renderCategory(page: CategoryPage): string {
   const { category, nav } = page;
@@ -216,9 +265,10 @@ export function renderNotFound(): string {
   );
 }
 
+export function renderErrorBody(): string {
+  return `<section class="card"><p class="empty">Couldn't load the budget right now.<br />Try again in a moment.</p></section>`;
+}
+
 export function renderError(): string {
-  return shell(
-    'Unavailable',
-    `<section class="card"><p class="empty">Couldn't load the budget right now.<br />Try again in a moment.</p></section>`,
-  );
+  return shell('Unavailable', renderErrorBody());
 }

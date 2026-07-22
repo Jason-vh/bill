@@ -173,6 +173,15 @@ export async function getLandingData(requestedMonth?: string): Promise<LandingDa
   };
 }
 
+/**
+ * Prime the current-month caches (categories, plan, account) so the first
+ * visitor after startup — or after a TTL lapse — hits warm data instead of
+ * blocking on YNAB. Safe to call on an interval.
+ */
+export async function warmCache(): Promise<void> {
+  await getLandingData();
+}
+
 export async function getCategoryPage(categoryId: string, requestedMonth?: string): Promise<CategoryPage | null> {
   const month = await resolveMonth(requestedMonth);
   const groups = await getJointGroups(month);
