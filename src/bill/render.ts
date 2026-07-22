@@ -36,16 +36,17 @@ const STYLES = `
     -webkit-font-smoothing:antialiased;
     padding:max(env(safe-area-inset-top),20px) 16px max(env(safe-area-inset-bottom),28px);
   }
-  /* Viewport-locked wash. The very top edge is left at the base colour so it
-     matches the solid fill iOS paints behind the status bar (iOS uses the page
-     background-COLOUR there, never a background image). Colour blooms in from
-     the sides and bottom instead of the top corners, so there's no seam. */
+  /* Viewport-locked wash. Both the top and bottom edges are left at the base
+     colour so they match the solid fills iOS paints behind the status bar and
+     home indicator (iOS uses the page background-COLOUR there, never a
+     background image). Colour blooms in from the sides and the middle instead
+     of the very edges, so there's no seam at either safe area. */
   body::before {
     content:""; position:fixed; inset:0; z-index:-1;
     background:
       radial-gradient(80% 70% at -10% 50%, #f7d3a4 0%, rgba(247,211,164,0) 55%),
       radial-gradient(80% 70% at 110% 46%, #b6cbf1 0%, rgba(182,203,241,0) 55%),
-      radial-gradient(115% 80% at 50% 116%, #f2c3df 0%, rgba(242,195,223,0) 60%),
+      radial-gradient(115% 50% at 50% 68%, #f2c3df 0%, rgba(242,195,223,0) 60%),
       #e9e6ef;
   }
   .wrap { max-width:420px; margin:0 auto; }
